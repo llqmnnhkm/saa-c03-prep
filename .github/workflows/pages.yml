@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check content
+        run: node tools/validate.mjs
+
+      # A new build id in sw.js makes installed apps show "Update available".
+      - name: Stamp build id
+        run: |
+          BUILD="$(date -u +%Y%m%d.%H%M)-${GITHUB_SHA::7}"
+          sed -i "s/__BUILD__/${BUILD}/g" sw.js js/version.js
+          echo "Build ${BUILD}"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
