@@ -124,6 +124,7 @@ export function list(ctx) {
     const visuals = DIAGRAMS.filter(d => (cat === 'all' || diagramCats(d).includes(cat)) && (!q || [d.title, d.topic, d.blurb, ...d.services.map(id => svcById(id)?.name || '')].join(' ').toLowerCase().includes(q)));
 
     results.innerHTML = `
+      ${!q ? `<div class="list"><a class="row" href="#/cards">${icon('cards', 20)}<span class="row-main"><span class="row-title">Flashcards</span><span class="row-sub">Quick recall drills built from these notes</span></span><span class="chev">${icon('chevron-right', 18)}</span></a></div>` : ''}
       ${visuals.length ? `<section>
         <h2 class="label">Visual guides <span class="label-note">swipe</span></h2>
         <div class="cmp-cards" data-scroll="x" data-bleed>${visuals.map(visualCard).join('')}</div>

@@ -16,7 +16,8 @@ export function pool(f) {
     (!f.services.length || q.services.some(s => f.services.includes(s))) &&
     (f.source === 'all' ||
       (f.source === 'new' && !ans[q.id]) ||
-      (f.source === 'missed' && ans[q.id] && ans[q.id].last === false)));
+      (f.source === 'missed' && ans[q.id] && ans[q.id].last === false) ||
+      (f.source === 'due' && ans[q.id] && ans[q.id].due != null && ans[q.id].due <= Date.now())));
 }
 
 /** Start a session from filters, or from an explicit list of question ids. */
@@ -61,7 +62,7 @@ export function setup(ctx) {
     <section>
       <h2 class="label">Questions from</h2>
       <div class="seg" role="group" aria-label="Question source">
-        ${[['all', 'All'], ['new', 'Not tried'], ['missed', 'Missed']].map(([k, l]) =>
+        ${[['all', 'All'], ['new', 'New'], ['missed', 'Missed'], ['due', 'Due']].map(([k, l]) =>
           `<button type="button" data-src="${k}" aria-pressed="${f.source === k}">${l}<small>${srcCount(k)}</small></button>`).join('')}
       </div>
     </section>
@@ -216,6 +217,7 @@ export function run(ctx) {
         </div>
         <div class="meter"><span class="${p >= 72 ? 'ok' : ''}" style="width:${p}%"></span><i style="left:72%" title="72% target"></i></div>
         <p class="score-note">The marker shows 72%, a rough stand-in for the 720/1000 pass mark.</p>
+        ${wrongIds.length ? `<p class="score-note">${icon('refresh', 14)} ${wrongIds.length === 1 ? 'The question you missed comes' : `The ${wrongIds.length} questions you missed come`} back for review tomorrow.</p>` : ''}
       </section>
       ${weak.length ? `<section><h2 class="label">Review these services</h2><div class="chips wrapc">${weakChips(weak)}</div></section>` : ''}
       <section>

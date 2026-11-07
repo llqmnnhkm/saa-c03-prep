@@ -7,6 +7,7 @@ import * as Practice from './views/practice.js';
 import * as Exam from './views/exam.js';
 import * as Labs from './views/labs.js';
 import * as Learn from './views/learn.js';
+import * as Cards from './views/cards.js';
 
 // [pattern, view, tab, focused-flow?]
 const routes = [
@@ -19,6 +20,8 @@ const routes = [
   [/^\/labs$/, Labs.list, 'labs'],
   [/^\/labs\/([\w-]+)$/, Labs.run, 'labs', true],
   [/^\/learn$/, Learn.list, 'learn'],
+  [/^\/cards$/, Cards.setup, 'learn'],
+  [/^\/cards\/run$/, Cards.run, 'learn', true],
   [/^\/learn\/compare\/([\w-]+)$/, Learn.compare, 'learn'],
   [/^\/learn\/visual\/([\w-]+)$/, Learn.visual, 'learn'],
   [/^\/learn\/([\w-]+)$/, Learn.service, 'learn'],
@@ -92,7 +95,7 @@ backBtn.addEventListener('click', () => {
   }
 });
 
-['click', 'input', 'change'].forEach(type => {
+['click', 'input', 'change', 'keydown'].forEach(type => {
   [view, dock].forEach(el => el.addEventListener(type, e => handlers[type]?.(e)));
 });
 

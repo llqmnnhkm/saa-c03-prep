@@ -8,8 +8,11 @@ A study app for the **AWS Certified Solutions Architect – Associate (SAA-C03)*
 
 | Section | What it does |
 | --- | --- |
-| **Practice** | Answer questions one at a time. After you check an answer you see why each option is right or wrong, plus what to study next with links to the service notes. Filter by domain, service, or questions you missed. |
+| **Practice** | 250 original questions, weighted like the exam. Answer them one at a time. After you check an answer you see why each option is right or wrong, plus what to study next with links to the service notes. Filter by domain, service, questions you missed, or ones due for review. |
 | **Exam** | Timed mock exams (65 Q / 130 min, 30 Q / 60 min, or 15 Q / 30 min) weighted like the real exam. Flag questions and jump around with the grid. At the end you get your score, a breakdown by domain and a full review. |
+| **Review** | Questions you get wrong come back after 1 day, then 3, then 7, until you’ve answered them right on each review. Home shows how many are due. |
+| **Readiness** | An estimate from your last 30 answers in each domain, weighted like the exam, against a 72% target. |
+| **Flashcards** | 333 quick recall cards built from the service notes: fill in the hidden term, or name the service. Tap to flip, then mark Got it or Again (or swipe). |
 | **Labs** | Console walkthroughs as multiple-choice steps: *you're on this screen — what do you do next?* Each step explains what to click, and you finish with a cheat sheet of the whole procedure. |
 | **Learn** | Notes for about 55 services (key numbers, exam must-knows, when to use and when not to), side-by-side comparison tables, and visual guides: infographics for VPC layout, security groups vs NACLs, load balancers, S3 storage classes, messaging and disaster recovery. Tap one to open it full screen. |
 

@@ -25,6 +25,7 @@ const P = {
   play: '<path d="M7 4.5v15l12-7.5z"/>',
   expand: '<path d="M14 4h6v6"/><path d="M10 20H4v-6"/><path d="M20 4l-6.5 6.5"/><path d="M4 20l6.5-6.5"/>',
   diagram: '<rect x="8.5" y="3" width="7" height="5" rx="1.2"/><rect x="3" y="16" width="7" height="5" rx="1.2"/><rect x="14" y="16" width="7" height="5" rx="1.2"/><path d="M12 8v4M6.5 16v-4h11v4"/>',
+  cards: '<rect x="6" y="3" width="14" height="16" rx="2.5"/><path d="M3.5 7v11.5A2.5 2.5 0 0 0 6 21h10"/>',
   columns: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/>',
   share: '<path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',

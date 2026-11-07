@@ -1,4 +1,4 @@
-import { store } from '../store.js';
+import { store, reviewQueue, readiness, REVIEW_STEPS, READY_MIN, RECENT, PASS } from '../store.js';
 import { icon } from '../icons.js';
 import { esc, pct, fmtClock } from '../util.js';
 import { QUESTIONS, DOMAINS } from '../../data/questions.js';
@@ -31,6 +31,62 @@ function serviceStats(answers) {
     .slice(0, 6);
 }
 
+// "today", "tomorrow", or a weekday / date for the next review.
+function whenLabel(ts) {
+  const day = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const diff = Math.round((day(ts) - day(Date.now())) / 864e5);
+  if (diff <= 0) return 'today';
+  if (diff === 1) return 'tomorrow';
+  if (diff < 7) return new Date(ts).toLocaleDateString(undefined, { weekday: 'long' });
+  return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+function reviewHTML(rq) {
+  if (!rq.total) return '';
+  const steps = REVIEW_STEPS.join(', ').replace(/, (\d+)$/, ' and $1');
+  if (rq.due.length) {
+    return `<section class="card review-card due">
+      <div class="review-main">
+        <span class="review-n">${rq.due.length}</span>
+        <div><b>${rq.due.length === 1 ? 'Question' : 'Questions'} to review</b><span>Mistakes come back after ${steps} days until you get them right.</span></div>
+      </div>
+      <button type="button" class="btn primary block" data-act="review">${icon('refresh', 18)} Review now</button>
+    </section>`;
+  }
+  return `<section class="card review-card">
+    <div class="review-main">
+      <span class="review-n">${icon('check', 20)}</span>
+      <div><b>Nothing to review today</b><span>Next review ${whenLabel(rq.next)} · ${rq.total} ${rq.total === 1 ? 'question' : 'questions'} in your review schedule</span></div>
+    </div>
+  </section>`;
+}
+
+function readinessHTML(r) {
+  const domRows = r.doms.map(({ d, n, acc }) => `<div class="dom-row" style="--c:var(--d${d.id})">
+    <div class="dom-row-top"><b>${esc(d.full)}</b><span>${n ? `${acc}% <small>of last ${n}</small>` : 'Not started'}</span></div>
+    <div class="meter sm"><span style="width:${acc || 0}%;background:var(--c)"></span><i style="left:${PASS}%"></i></div>
+  </div>`).join('');
+
+  if (r.score == null) {
+    const need = r.doms.filter(x => x.n < READY_MIN);
+    return `<div class="card stack-sm">
+      <div class="ready-top"><div><b class="ready-score muted">—</b><span>Not enough answers yet</span></div></div>
+      <p class="small muted">Answer at least ${READY_MIN} questions in every domain to get a score. Still needed: ${need.map(x => `${esc(x.d.name)} (${READY_MIN - x.n})`).join(', ')}.</p>
+      <div class="dom-rows">${domRows}</div>
+    </div>`;
+  }
+  const on = r.score >= PASS;
+  return `<div class="card stack-sm">
+    <div class="ready-top">
+      <div><b class="ready-score">${r.score}%</b><span>Exam readiness</span></div>
+      <span class="badge ${on ? 'ok' : 'bad'}">${on ? 'On track' : `${PASS - r.score} points to go`}</span>
+    </div>
+    <div class="meter"><span class="${on ? 'ok' : ''}" style="width:${r.score}%"></span><i style="left:${PASS}%" title="Target ${PASS}%"></i></div>
+    <p class="small muted">Your last ${RECENT} answers in each domain, weighted like the exam. The line marks the ${PASS}% target. This is an estimate from practice, not an official score.</p>
+    <div class="dom-rows">${domRows}</div>
+  </div>`;
+}
+
 export function render(ctx) {
   ctx.header({ title: 'SAA-C03 Prep', large: 'SAA-C03 Prep' });
   const s = store.state;
@@ -41,12 +97,8 @@ export function render(ctx) {
   seenQs.forEach(q => { seen += answers[q.id].seen; correct += answers[q.id].correct; });
   const best = s.exams.reduce((m, e) => Math.max(m, pct(e.correct, e.total)), 0);
 
-  const domains = DOMAINS.map(d => {
-    let ds = 0, dc = 0;
-    QUESTIONS.filter(q => q.domain === d.id && answers[q.id]).forEach(q => { ds += answers[q.id].seen; dc += answers[q.id].correct; });
-    return { d, seen: ds, correct: dc };
-  });
-
+  const rq = reviewQueue();
+  const ready = readiness();
   const weak = serviceStats(answers);
   const exam = s.activeExam;
   const examLeft = exam ? exam.deadline - Date.now() : 0;
@@ -79,13 +131,15 @@ export function render(ctx) {
       <div class="resume-actions"><a class="btn primary sm" href="#/practice/run">Resume</a></div>
     </section>` : ''}
 
+    ${reviewHTML(rq)}
+
     <section>
       <h2 class="label">Start</h2>
       <div class="actions">
         <button type="button" class="action primary" data-act="quick">${icon('practice', 22)}<b>Quick practice</b><span>10 random questions with explanations</span></button>
         <a class="action" href="#/exam">${icon('exam', 22)}<b>Mock exam</b><span>Timed, scored at the end</span></a>
         <a class="action" href="#/labs">${icon('labs', 22)}<b>Console labs</b><span>Step-by-step scenarios</span></a>
-        <a class="action" href="#/learn">${icon('learn', 22)}<b>Service notes</b><span>What to know for each service</span></a>
+        <a class="action" href="#/cards">${icon('cards', 22)}<b>Flashcards</b><span>Quick recall of exam facts</span></a>
       </div>
     </section>
 
@@ -100,13 +154,8 @@ export function render(ctx) {
     </section>
 
     <section>
-      <h2 class="label">Accuracy by domain</h2>
-      <div class="card dom-rows">
-        ${domains.map(({ d, seen: ds, correct: dc }) => `<div class="dom-row" style="--c:var(--d${d.id})">
-          <div class="dom-row-top"><b>${esc(d.full)}</b><span>${ds ? pct(dc, ds) + '%' : 'Not started'}</span></div>
-          <div class="bar"><span style="width:${ds ? pct(dc, ds) : 0}%"></span></div>
-        </div>`).join('')}
-      </div>
+      <h2 class="label">Readiness</h2>
+      ${readinessHTML(ready)}
     </section>
 
     <section>
@@ -164,6 +213,7 @@ export function render(ctx) {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (!act) return;
     if (act === 'quick') startPractice(ctx, { filters: { source: 'all', domains: [], services: [], count: 10 } });
+    if (act === 'review') startPractice(ctx, { ids: rq.due, limit: 20 });
     if (act === 'weak') {
       const ids = new Set(weak.map(w => w.svc.id));
       const qs = QUESTIONS.filter(q => q.services.some(id => ids.has(id))).map(q => q.id);

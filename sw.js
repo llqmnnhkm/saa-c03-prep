@@ -24,6 +24,7 @@ const SHELL = [
   'js/views/exam.js',
   'js/views/labs.js',
   'js/views/learn.js',
+  'js/views/cards.js',
   'data/questions.js',
   'data/questions-secure.js',
   'data/questions-resilient.js',
