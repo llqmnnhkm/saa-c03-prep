@@ -11,6 +11,13 @@
 //   why       one explanation per option, same order as options
 //   study     what to review next
 // Inline formatting: `code` and **bold**.
+//
+// Extra questions live in one file per domain (questions-secure.js etc.).
+
+import { SECURE } from './questions-secure.js';
+import { RESILIENT } from './questions-resilient.js';
+import { PERFORMANCE } from './questions-performance.js';
+import { COST } from './questions-cost.js';
 
 export const DOMAINS = [
   { id: 1, name: 'Secure', full: 'Design Secure Architectures', weight: 30 },
@@ -19,7 +26,7 @@ export const DOMAINS = [
   { id: 4, name: 'Cost-optimized', full: 'Design Cost-Optimized Architectures', weight: 20 },
 ];
 
-export const QUESTIONS = [
+const CORE = [
   /* ------------------------------------------------ Domain 1 · Secure -- */
   {
     id: 'q001', domain: 1, services: ['iam', 'ec2', 's3'],
@@ -27,8 +34,8 @@ export const QUESTIONS = [
     options: [
       'Create an IAM user, generate access keys and store them in the application’s config file.',
       'Create an IAM role with a policy that allows access to the bucket and attach it to the instance through an instance profile.',
-      'Make the bucket public and restrict it with a bucket policy that allows the instance’s public IP address.',
-      'Store an IAM user’s access keys in AWS Secrets Manager and have the application fetch them at startup.',
+      'Make the bucket public and restrict it with a bucket policy that allows only the instance’s public IP as the source.',
+      'Store an IAM user’s access keys in AWS Secrets Manager, rotate them every 90 days, and fetch them at startup.',
     ],
     answer: [1],
     why: [
@@ -61,10 +68,10 @@ export const QUESTIONS = [
     id: 'q003', domain: 1, services: ['cloudfront', 's3'],
     q: 'A static website is stored in an S3 bucket and served through Amazon CloudFront. Users must not be able to bypass CloudFront and read objects from the bucket directly. What should the architect do?',
     options: [
-      'Enable S3 static website hosting and make the bucket public.',
-      'Configure origin access control (OAC) on the distribution, allow only that distribution in the bucket policy, and keep Block Public Access on.',
-      'Generate S3 presigned URLs for every object on the site.',
-      'Enable S3 Transfer Acceleration on the bucket.',
+      'Enable S3 static website hosting, make the bucket public and point the distribution at the website endpoint.',
+      'Use origin access control (OAC), allow only that distribution in the bucket policy, and keep Block Public Access on.',
+      'Generate S3 presigned URLs for every object on the site and have CloudFront forward them to the bucket.',
+      'Enable S3 Transfer Acceleration on the bucket and route CloudFront through the accelerate endpoint.',
     ],
     answer: [1],
     why: [
@@ -79,10 +86,10 @@ export const QUESTIONS = [
     id: 'q004', domain: 1, services: ['organizations', 'iam'],
     q: 'A company uses AWS Organizations with dozens of accounts. Compliance requires that nobody in member accounts, including account administrators, can create resources outside us-east-1 and eu-west-1. Which solution is most effective?',
     options: [
-      'Attach an IAM policy that denies other Regions to every user and role in each account.',
-      'Create a service control policy (SCP) that denies actions when `aws:RequestedRegion` is not one of the two Regions, and attach it to the organization root or OUs.',
+      'Attach an IAM policy that denies other Regions to every user and role in each account, and review it monthly.',
+      'Attach an SCP to the organization root that denies actions when `aws:RequestedRegion` is not one of the two Regions.',
       'Use AWS Config rules to detect resources created in other Regions.',
-      'Enable AWS CloudTrail in all Regions and alert on API calls made outside the two Regions.',
+      'Enable AWS CloudTrail in all Regions and alert the security team on any API call made outside the two Regions.',
     ],
     answer: [1],
     why: [
@@ -97,10 +104,10 @@ export const QUESTIONS = [
     id: 'q005', domain: 1, services: ['secretsmanager', 'rds'],
     q: 'An application connects to Amazon RDS for MySQL with credentials hard-coded in its source code. Security wants the credentials removed from code and rotated automatically every 30 days, with the least operational effort. What should the architect recommend?',
     options: [
-      'Store the credentials in AWS Secrets Manager, turn on automatic rotation, and have the application retrieve the secret at runtime.',
-      'Store the credentials as a SecureString in Systems Manager Parameter Store and write a cron job to rotate them.',
-      'Encrypt the credentials with AWS KMS and keep the ciphertext in the source code.',
-      'Put the credentials in an encrypted S3 object and rotate them manually each month.',
+      'Store them in AWS Secrets Manager with automatic rotation turned on, and have the app read the secret at runtime.',
+      'Store the credentials as a SecureString in Systems Manager Parameter Store and write a cron job on the server to rotate them.',
+      'Encrypt the credentials with AWS KMS, keep the ciphertext in the source code and decrypt it when the app starts.',
+      'Put the credentials in an encrypted S3 object, restrict it with a bucket policy, and rotate them manually each month.',
     ],
     answer: [0],
     why: [
@@ -115,10 +122,10 @@ export const QUESTIONS = [
     id: 'q006', domain: 1, services: ['waf', 'elb'],
     q: 'A public web application behind an Application Load Balancer is receiving SQL injection and cross-site scripting attempts. The company wants to block these requests without changing application code. What should the architect do?',
     options: [
-      'Add security group rules to block the malicious requests.',
+      'Add security group rules on the ALB that block requests containing SQL keywords or script tags.',
       'Add deny rules to the subnet’s network ACL.',
-      'Create an AWS WAF web ACL with the managed SQL injection and cross-site scripting rule groups and associate it with the ALB.',
-      'Rely on AWS Shield Standard, which inspects HTTP payloads.',
+      'Associate an AWS WAF web ACL with the ALB using the managed SQL injection and XSS rule groups.',
+      'Rely on AWS Shield Standard, which inspects HTTP payloads for injection attacks at no extra cost.',
     ],
     answer: [2],
     why: [
@@ -169,10 +176,10 @@ export const QUESTIONS = [
     id: 'q009', domain: 1, services: ['cognito', 's3', 'iam'],
     q: 'A mobile app lets users sign in with email or with Google, then upload photos directly into their own folder in an S3 bucket. No AWS credentials may be embedded in the app. What should the architect use?',
     options: [
-      'Create an IAM user for every app user and give each one access keys.',
-      'Use an Amazon Cognito user pool for sign-in, with Google federation, and a Cognito identity pool to exchange tokens for temporary AWS credentials limited to the user’s own prefix.',
-      'Embed one IAM user’s access keys in the app and restrict them with a bucket policy.',
-      'Issue each user an API Gateway API key and have a Lambda function write the files.',
+      'Create an IAM user for every app user when they sign up, and give each one access keys limited to their own prefix.',
+      'Use a Cognito user pool (with Google federation) for sign-in, and a Cognito identity pool for temporary credentials scoped to the user’s prefix.',
+      'Embed one IAM user’s access keys in the app, and restrict them with a bucket policy that allows writes only under each user’s prefix.',
+      'Issue each user an API Gateway API key, and have a Lambda function check the key and write the files to the user’s folder.',
     ],
     answer: [1],
     why: [
@@ -187,9 +194,9 @@ export const QUESTIONS = [
     id: 'q010', domain: 1, services: ['rds', 'kms'],
     q: 'An existing Amazon RDS for PostgreSQL DB instance was created without encryption. Compliance now requires encryption at rest. What should the architect do?',
     options: [
-      'Modify the DB instance and turn on storage encryption.',
-      'Take a snapshot, copy it with encryption enabled using a KMS key, restore a new DB instance from the encrypted copy, and point the application to it.',
-      'Create an encrypted read replica of the unencrypted instance and promote it.',
+      'Modify the DB instance, turn on storage encryption with a KMS key, and apply the change during the next maintenance window.',
+      'Snapshot the instance, copy the snapshot with encryption enabled, restore a new instance from the copy, and repoint the app.',
+      'Create an encrypted read replica of the unencrypted instance, wait for it to catch up, then promote it.',
       'Encrypt the underlying EBS volumes from the EC2 console.',
     ],
     answer: [1],
@@ -205,10 +212,10 @@ export const QUESTIONS = [
     id: 'q011', domain: 1, services: ['ssm', 'ec2'],
     q: 'Administrators need shell access to Linux EC2 instances in private subnets. Security requires no open inbound ports, no bastion hosts, no SSH keys, and a log of every session. What should the architect implement?',
     options: [
-      'A bastion host in a public subnet that allows SSH only from corporate IP addresses.',
-      'AWS Systems Manager Session Manager, with the SSM Agent, an instance role and session logging to S3 or CloudWatch Logs.',
+      'A bastion host in a public subnet that allows SSH only from corporate IP addresses, with keys stored in Secrets Manager.',
+      'Systems Manager Session Manager, with the SSM Agent, an instance role and session logging to S3 or CloudWatch Logs.',
       'EC2 Instance Connect with port 22 open to 0.0.0.0/0.',
-      'A Site-to-Site VPN and SSH from the office network.',
+      'A Site-to-Site VPN from the office, then SSH to the instances’ private IPs using keys kept in a vault.',
     ],
     answer: [1],
     why: [
@@ -223,10 +230,10 @@ export const QUESTIONS = [
     id: 'q012', domain: 1, services: ['cloudtrail'],
     q: 'An S3 bucket was deleted last week. The security team must find out which IAM principal deleted it and from which IP address. Where should they look?',
     options: [
-      'Amazon CloudWatch metrics for S3',
+      'Amazon CloudWatch metrics for S3, looking at the bucket’s request metrics',
       'AWS CloudTrail event history, filtered on the `DeleteBucket` event',
-      'VPC Flow Logs',
-      'AWS Config resource timeline',
+      'VPC Flow Logs for the S3 gateway endpoint',
+      'AWS Config resource timeline for the deleted bucket',
     ],
     answer: [1],
     why: [
@@ -241,10 +248,10 @@ export const QUESTIONS = [
     id: 'q013', domain: 1, services: ['vpc'], compare: 'sgnacl',
     q: 'A web application in a public subnet is being probed by a specific malicious IP range. The team must block that range from reaching any instance in the subnet immediately. What should they do?',
     options: [
-      'Add a deny rule for the range to the instances’ security group.',
-      'Add an inbound deny rule for the range to the subnet’s network ACL, with a lower rule number than the allow rules.',
+      'Add a deny rule for the range to the instances’ security group, above the existing allow rules.',
+      'Add an inbound deny rule for the range to the subnet’s network ACL, numbered before the allow rules.',
       'Detach the internet gateway from the VPC.',
-      'Remove the public IP addresses from the instances.',
+      'Remove the public IP addresses from the instances so they can’t be reached directly.',
     ],
     answer: [1],
     why: [
@@ -277,10 +284,10 @@ export const QUESTIONS = [
     id: 'q015', domain: 1, services: ['iam', 'dynamodb', 'lambda'],
     q: 'A Lambda function in Account B must read items from a DynamoDB table in Account A. What is the most secure way to grant access?',
     options: [
-      'Create an IAM user in Account A and put its access keys in the function’s environment variables.',
-      'Create an IAM role in Account A with read access to the table and a trust policy that allows the function’s execution role in Account B to assume it.',
+      'Create an IAM user in Account A with read access, and put its access keys in the function’s encrypted environment variables.',
+      'Create a role in Account A with read access to the table, whose trust policy lets the function’s execution role in Account B assume it.',
       'Add a resource-based policy to the table that allows `"Principal": "*"`.',
-      'Copy the table to Account B every night.',
+      'Copy the table to Account B every night with an AWS Glue job and read the copy.',
     ],
     answer: [1],
     why: [
@@ -351,8 +358,8 @@ export const QUESTIONS = [
     id: 'q019', domain: 1, services: ['s3', 'organizations'],
     q: 'A bucket in a shared-services account must be readable by any IAM principal in the company’s AWS Organization, including accounts added later, but by nobody outside it. Which solution requires the least ongoing administration?',
     options: [
-      'List every account ID in the bucket policy and update it whenever an account is added.',
-      'Add a bucket policy that allows `s3:GetObject` to `"Principal": "*"` with the condition `aws:PrincipalOrgID` equal to the organization ID.',
+      'List every account ID in the bucket policy as a principal, and update the policy whenever a new account joins the organization.',
+      'Use a bucket policy allowing `s3:GetObject` to any principal, with the condition `aws:PrincipalOrgID` equal to the organization ID.',
       'Turn off Block Public Access and make the objects public.',
       'Create an IAM user in the shared-services account for each other account.',
     ],
@@ -387,10 +394,10 @@ export const QUESTIONS = [
     id: 'q021', domain: 1, services: ['config', 'ebs', 'ssm'],
     q: 'The security team wants to continuously check whether any EBS volume in the account is unencrypted and automatically remediate any non-compliant volume. What should the architect use?',
     options: [
-      'AWS Config with the managed rule `encrypted-volumes` and automatic remediation through a Systems Manager Automation runbook.',
-      'AWS Trusted Advisor weekly reports.',
-      'AWS CloudTrail Insights.',
-      'Amazon Inspector EC2 scanning.',
+      'AWS Config with the `encrypted-volumes` managed rule and automatic remediation through Systems Manager Automation.',
+      'AWS Trusted Advisor weekly reports, with an on-call engineer encrypting each flagged volume by hand the next day.',
+      'AWS CloudTrail Insights alerts on unusual `CreateVolume` activity.',
+      'Amazon Inspector EC2 scanning, with findings sent to EventBridge to trigger a fix.',
     ],
     answer: [0],
     why: [
@@ -407,9 +414,9 @@ export const QUESTIONS = [
     id: 'q022', domain: 2, services: ['sqs', 'autoscaling'], compare: 'messaging',
     q: 'An order website sends orders directly to backend processing servers. During flash sales the backend is overwhelmed and some orders are lost. The company must not lose orders and must absorb spikes. What should the architect do?',
     options: [
-      'Move the backend to a larger instance type.',
-      'Put an Amazon SQS queue between the web tier and the processors, and scale the processors with Auto Scaling based on queue backlog.',
-      'Publish orders to an Amazon SNS topic that pushes them to the processors.',
+      'Move the backend to a larger instance type and raise its connection limits for flash sales.',
+      'Put an Amazon SQS queue between the web tier and the processors, and scale the processors on the queue backlog.',
+      'Publish orders to an Amazon SNS topic that pushes each order to the processors over HTTPS as it arrives.',
       'Deploy the backend in a second Availability Zone.',
     ],
     answer: [1],
@@ -443,9 +450,9 @@ export const QUESTIONS = [
     id: 'q024', domain: 2, services: ['elb', 'autoscaling', 'ec2'],
     q: 'A stateless web application runs on a single EC2 instance. It must become highly available and handle changing traffic levels. What should the architect do?',
     options: [
-      'Move to a larger instance and take EBS snapshots every hour.',
-      'Place EC2 instances in an Auto Scaling group across at least two Availability Zones behind an Application Load Balancer, using ELB health checks.',
-      'Run two instances in the same AZ behind a Network Load Balancer.',
+      'Move to a larger instance with an Elastic IP, and take EBS snapshots every hour so it can be rebuilt quickly.',
+      'Run instances in an Auto Scaling group across two or more AZs behind an Application Load Balancer, with ELB health checks.',
+      'Run two instances in the same AZ behind a Network Load Balancer, with cross-zone load balancing turned on.',
       'Attach an Elastic IP and use Route 53 simple routing to the instance.',
     ],
     answer: [1],
@@ -497,16 +504,16 @@ export const QUESTIONS = [
     id: 'q027', domain: 2, services: ['route53', 's3', 'elb'], compare: 'route53',
     q: 'A website runs behind an Application Load Balancer in one Region. If the site becomes unhealthy, users must automatically be shown a static maintenance page hosted in Amazon S3. What should the architect configure?',
     options: [
-      'Route 53 failover routing: a primary record for the ALB with a health check, and a secondary record for the S3 static website.',
-      'Route 53 weighted routing, 50% to the ALB and 50% to S3.',
-      'Route 53 latency-based routing between the ALB and S3.',
-      'CloudFront geo restriction.',
+      'Route 53 failover routing: primary record for the ALB with a health check, secondary record for an S3 static website.',
+      'Route 53 weighted routing, with 50% of users sent to the ALB and 50% to the S3 maintenance page.',
+      'Route 53 latency-based routing between the ALB and the S3 static website, with health checks.',
+      'CloudFront geo restriction that blocks users while the site is down.',
     ],
     answer: [0],
     why: [
       'Failover routing answers with the primary while its health check passes and switches to the secondary when it fails. This is active-passive.',
       'Half of users would see the maintenance page all the time.',
-      'Latency routing picks the lowest-latency endpoint, not the healthy one.',
+      'Latency routing picks by latency, so some users would get the maintenance page even while the site is healthy.',
       'Geo restriction allows or blocks countries. It isn’t about health.',
     ],
     study: 'Route 53 routing policies and health checks. Alias records can point at ALBs, CloudFront and S3 website endpoints, including at the zone apex.',
@@ -551,14 +558,14 @@ export const QUESTIONS = [
     id: 'q030', domain: 2, services: ['vpc'],
     q: 'Private subnets in three Availability Zones send outbound internet traffic through a single NAT gateway in AZ-a. What should change so outbound access survives the failure of any one AZ?',
     options: [
-      'Replace the NAT gateway with a larger one.',
-      'Create a NAT gateway in a public subnet in each AZ, and route each private subnet to the NAT gateway in its own AZ.',
+      'Replace the NAT gateway with a larger one, which AWS replicates across AZs automatically.',
+      'Add a NAT gateway in a public subnet in each AZ, and route each private subnet to the one in its own AZ.',
       'Add a second internet gateway to the VPC.',
-      'Run a NAT instance in each AZ with a custom failover script.',
+      'Run a NAT instance in each AZ, with a custom script that moves routes to a healthy instance on failure.',
     ],
     answer: [1],
     why: [
-      'NAT gateways scale automatically. Size isn’t the problem, the single AZ is.',
+      'NAT gateways scale automatically and are **not** replicated across AZs. Size isn’t the problem, the single AZ is.',
       'A zonal NAT gateway is redundant only inside its AZ. One per AZ with per-AZ route tables removes the dependency and also avoids cross-AZ data charges.',
       'A VPC has only one internet gateway, and the IGW is already highly available.',
       'NAT instances are legacy, need patching and need scripts for failover.',
@@ -569,9 +576,9 @@ export const QUESTIONS = [
     id: 'q031', domain: 2, services: ['sqs'], compare: 'messaging',
     q: 'A banking system sends transactions to a queue. Transactions for the same account must be processed in the order they were sent and never processed twice. Throughput is about 200 messages per second. Which solution should the architect use?',
     options: [
-      'An SQS standard queue',
-      'An SQS FIFO queue, with the account ID as the message group ID',
-      'An SNS standard topic',
+      'An SQS standard queue with a long visibility timeout',
+      'An SQS FIFO queue with the account ID as message group ID',
+      'An SNS standard topic with an SQS subscriber per account',
       'Kinesis Data Streams with a random partition key',
     ],
     answer: [1],
@@ -587,10 +594,10 @@ export const QUESTIONS = [
     id: 'q032', domain: 2, services: ['stepfunctions', 'lambda'],
     q: 'An order workflow must validate payment, then reserve inventory and notify the warehouse in parallel, wait up to 3 days for a manager’s approval, and retry failed steps with backoff. The team wants as little orchestration code as possible. What should the architect use?',
     options: [
-      'Lambda functions that call each other directly.',
-      'An AWS Step Functions Standard workflow using a Parallel state, Retry/Catch, and a task token for the approval step.',
-      'An AWS Step Functions Express workflow.',
-      'SQS queues between each step, with cron jobs to move work along.',
+      'Lambda functions that call each other directly, storing approval state in DynamoDB between calls.',
+      'A Step Functions Standard workflow with a Parallel state, Retry/Catch, and a task token for the approval.',
+      'A Step Functions Express workflow with a Parallel state and a Wait state for the approval.',
+      'SQS queues between each step, with cron jobs on EC2 to move work from one queue to the next.',
     ],
     answer: [1],
     why: [
@@ -605,9 +612,9 @@ export const QUESTIONS = [
     id: 'q033', domain: 2, services: ['sqs', 'lambda'],
     q: 'A Lambda function processes messages from an SQS queue. A few malformed messages fail every time, keep coming back and waste invocations. What should the architect do?',
     options: [
-      'Raise the Lambda timeout to 15 minutes.',
-      'Configure a dead-letter queue on the source queue with a `maxReceiveCount` so repeatedly failing messages are moved aside.',
-      'Cut the queue’s message retention to 1 minute.',
+      'Raise the Lambda timeout to 15 minutes so the function has time to process the malformed messages.',
+      'Configure a dead-letter queue on the source queue with a `maxReceiveCount`, so repeat failures are moved aside.',
+      'Cut the queue’s message retention to 1 minute so failing messages expire before they are retried.',
       'Replace the queue with an SNS topic.',
     ],
     answer: [1],
@@ -641,10 +648,10 @@ export const QUESTIONS = [
     id: 'q035', domain: 2, services: ['directconnect', 'vpn'],
     q: 'A company connects to AWS with a single 10 Gbps AWS Direct Connect connection. Management wants a cost-effective backup path in case it fails, and reduced bandwidth during an outage is acceptable. What should the architect add?',
     options: [
-      'A second Direct Connect connection at the same location.',
-      'An AWS Site-to-Site VPN connection as a backup, using BGP so traffic fails over automatically.',
+      'A second Direct Connect connection at the same location, from the same provider.',
+      'A Site-to-Site VPN as a backup, using BGP so traffic fails over automatically.',
       'A VPC peering connection to the on-premises network.',
-      'AWS Global Accelerator in front of the VPC.',
+      'AWS Global Accelerator in front of the VPC, with the data centre as an endpoint.',
     ],
     answer: [1],
     why: [
@@ -679,10 +686,10 @@ export const QUESTIONS = [
     id: 'q037', domain: 2, services: ['s3'],
     q: 'Users occasionally overwrite or delete important objects in an S3 bucket by mistake. The company must be able to recover any earlier version of an object. What should the architect enable?',
     options: [
-      'S3 Versioning, with lifecycle rules to expire old noncurrent versions',
-      'S3 Transfer Acceleration',
-      'S3 One Zone-IA storage class',
-      'S3 server access logging',
+      'S3 Versioning, with lifecycle expiry of old noncurrent versions',
+      'S3 Transfer Acceleration with a daily copy to a second bucket',
+      'S3 One Zone-IA storage class for all objects',
+      'S3 server access logging to record who changed each object',
     ],
     answer: [0],
     why: [
@@ -736,7 +743,7 @@ export const QUESTIONS = [
     q: 'An Amazon RDS for PostgreSQL database for an e-commerce site slows down because the analytics team runs heavy reporting queries during business hours. Write performance must not be affected. What should the architect do?',
     options: [
       'Create a read replica and point the reporting queries at the replica’s endpoint.',
-      'Enable Multi-AZ and send the reports to the standby.',
+      'Enable Multi-AZ and send the reporting queries to the standby instance’s endpoint.',
       'Increase the allocated storage.',
       'Put Amazon ElastiCache in front of the reporting queries.',
     ],
@@ -772,7 +779,7 @@ export const QUESTIONS = [
     q: 'A web application stores user session data on each EC2 instance. When Auto Scaling terminates instances, users are logged out. Sessions must be shared across instances with sub-millisecond latency. What should the architect use?',
     options: [
       'Amazon ElastiCache (Valkey or Redis OSS) as a central session store',
-      'Sticky sessions on the Application Load Balancer',
+      'Sticky sessions on the Application Load Balancer, with a long cookie duration',
       'Store sessions on each instance’s EBS volume',
       'Store sessions as objects in Amazon S3',
     ],
@@ -807,10 +814,10 @@ export const QUESTIONS = [
     id: 'q044', domain: 3, services: ['kinesis'], compare: 'messaging',
     q: 'A company collects thousands of clickstream events per second from its website. Several applications must process the same stream in real time, and the data must be replayable for up to 7 days. What should the architect use?',
     options: [
-      'Amazon Kinesis Data Streams with retention set to 7 days and multiple consumers',
-      'An Amazon SQS standard queue',
-      'Amazon Data Firehose delivering to S3',
-      'An Amazon SNS standard topic',
+      'Amazon Kinesis Data Streams with 7-day retention and multiple consumers',
+      'An Amazon SQS standard queue with one consumer per application',
+      'Amazon Data Firehose delivering to S3 for each application',
+      'An Amazon SNS standard topic with an HTTPS subscription per app',
     ],
     answer: [0],
     why: [
@@ -826,8 +833,8 @@ export const QUESTIONS = [
     q: 'IoT devices send JSON telemetry. The company wants the data stored in S3 in near real time, converted to Apache Parquet, with no servers or shards to manage. What should the architect use?',
     options: [
       'Amazon Data Firehose with record format conversion to Parquet, delivering to S3',
-      'Kinesis Data Streams with EC2 consumers that write files',
-      'SQS with a Lambda function that writes each message to S3',
+      'Kinesis Data Streams with consumers on EC2 that convert and write Parquet files',
+      'SQS with a Lambda function that writes each message to S3 as a JSON object',
       'AWS Database Migration Service',
     ],
     answer: [0],
@@ -862,9 +869,9 @@ export const QUESTIONS = [
     q: 'A self-managed database on EC2 needs a sustained 100,000 IOPS, sub-millisecond latency and 99.999% volume durability. Which EBS volume type should the architect choose?',
     options: [
       'Provisioned IOPS SSD io2 Block Express',
-      'General Purpose SSD gp3',
+      'General Purpose SSD gp3 at maximum IOPS',
       'Throughput Optimized HDD st1',
-      'Instance store NVMe volumes',
+      'Instance store NVMe volumes in a RAID 0 array',
     ],
     answer: [0],
     why: [
@@ -897,10 +904,10 @@ export const QUESTIONS = [
     id: 'q049', domain: 3, services: ['athena', 'glue', 's3'],
     q: 'The operations team wants to run ad hoc SQL queries on months of ALB access logs stored in S3, without loading data into a database or managing servers. What should the architect recommend?',
     options: [
-      'Amazon Athena with a table defined over the log location in the AWS Glue Data Catalog',
-      'Load the logs into Amazon RDS each night',
-      'Provision an Amazon Redshift cluster and COPY the logs in',
-      'Launch an Amazon EMR cluster',
+      'Amazon Athena, with a table defined over the logs in the AWS Glue Data Catalog',
+      'Load the logs into Amazon RDS each night and query them with SQL',
+      'Provision an Amazon Redshift cluster and COPY the logs in for each analysis',
+      'Launch an Amazon EMR cluster with Hive tables over the log location',
     ],
     answer: [0],
     why: [
@@ -915,10 +922,10 @@ export const QUESTIONS = [
     id: 'q050', domain: 3, services: ['elb', 'ecs'], compare: 'elb',
     q: 'A company runs microservices on Amazon ECS. Requests to `/api/*` must go to the API service and `/images/*` to the image service, all behind one public HTTPS endpoint. What should the architect use?',
     options: [
-      'An Application Load Balancer with path-based listener rules that forward to separate target groups',
-      'A Network Load Balancer with one target group per port',
-      'A Gateway Load Balancer',
-      'Two load balancers with Route 53 weighted records',
+      'An Application Load Balancer with path-based rules forwarding to separate target groups',
+      'A Network Load Balancer with one listener and target group per service port',
+      'A Gateway Load Balancer with a target group per service',
+      'Two load balancers, one per service, behind Route 53 weighted records',
     ],
     answer: [0],
     why: [
@@ -951,10 +958,10 @@ export const QUESTIONS = [
     id: 'q052', domain: 3, services: ['transitgateway', 'vpc', 'vpn'],
     q: 'A company has 60 VPCs across several accounts plus two data centres connected by VPN. Every network must be able to reach every other, and managing VPC peering has become unmanageable. What should the architect do?',
     options: [
-      'Create an AWS Transit Gateway, share it across accounts with AWS RAM, and attach every VPC and the VPN connections.',
-      'Create a full mesh of VPC peering connections.',
-      'Move all workloads into one large VPC.',
-      'Create interface endpoints in every VPC.',
+      'Create a Transit Gateway, share it across accounts with AWS RAM, and attach every VPC and both VPNs.',
+      'Create a full mesh of VPC peering connections, plus a VPN from each data centre to every VPC.',
+      'Move all workloads into one large VPC shared with AWS RAM.',
+      'Create interface endpoints in every VPC and share them with the other accounts using AWS RAM.',
     ],
     answer: [0],
     why: [
@@ -970,8 +977,8 @@ export const QUESTIONS = [
     q: 'A genomics company runs an HPC workload that needs a high-performance parallel file system with sub-millisecond latency. It reads input datasets from S3 and writes results back to S3. Which storage should the architect choose?',
     options: [
       'Amazon FSx for Lustre linked to the S3 bucket',
-      'Amazon EFS',
-      'Amazon FSx for Windows File Server',
+      'Amazon EFS with Max I/O performance mode',
+      'Amazon FSx for Windows File Server with SSD storage',
       'Amazon S3 Glacier Flexible Retrieval',
     ],
     answer: [0],
@@ -988,8 +995,8 @@ export const QUESTIONS = [
     q: 'A company is moving Windows-based applications to AWS. They need a fully managed shared file system that uses SMB, integrates with Microsoft Active Directory and supports Windows ACLs. What should the architect choose?',
     options: [
       'Amazon FSx for Windows File Server',
-      'Amazon EFS',
-      'Amazon S3 File Gateway',
+      'Amazon EFS mounted on each Windows server',
+      'Amazon S3 File Gateway with SMB shares',
       'EBS Multi-Attach volumes',
     ],
     answer: [0],
@@ -1026,8 +1033,8 @@ export const QUESTIONS = [
     q: 'A company runs nightly video transcoding jobs. The jobs are stateless, checkpoint their progress and can restart if interrupted. Which option has the lowest compute cost?',
     options: [
       'Spot Instances across multiple instance types',
-      'On-Demand Instances',
-      'Reserved Instances',
+      'On-Demand Instances in an Auto Scaling group',
+      'Standard Reserved Instances for a 1-year term',
       'Dedicated Hosts',
     ],
     answer: [0],
@@ -1043,10 +1050,10 @@ export const QUESTIONS = [
     id: 'q057', domain: 4, services: ['s3'],
     q: 'Application logs in S3 are queried often for the first 30 days, rarely from 30 days to 1 year, and must be kept for 7 years for audits. After the first year, retrieval within 48 hours is acceptable. What is the most cost-effective storage plan?',
     options: [
-      'A lifecycle rule: S3 Standard → Standard-IA after 30 days → Glacier Deep Archive after 365 days → expire after 7 years',
-      'Keep everything in S3 Standard',
-      'Move every log to Glacier Deep Archive on day 1',
-      'Store all logs in S3 One Zone-IA for 7 years',
+      'Lifecycle: Standard → Standard-IA at 30 days → Deep Archive at 365 days → expire at 7 years',
+      'Keep everything in S3 Standard and delete logs manually after 7 years',
+      'Move every log to Glacier Deep Archive on day 1 and restore logs when they need querying',
+      'Store all logs in S3 One Zone-IA for 7 years, then expire them with a lifecycle rule',
     ],
     answer: [0],
     why: [
@@ -1080,7 +1087,7 @@ export const QUESTIONS = [
     q: 'EC2 instances in private subnets move several terabytes a day to and from S3 in the same Region through a NAT gateway, and the NAT gateway’s data processing charges are high. How can the architect cut this cost?',
     options: [
       'Create an S3 gateway VPC endpoint and add it to the private subnets’ route tables.',
-      'Create an S3 interface VPC endpoint.',
+      'Create an S3 interface VPC endpoint in each private subnet with private DNS enabled.',
       'Move the instances to public subnets with public IPs.',
       'Replace the NAT gateway with a larger NAT instance.',
     ],
@@ -1116,9 +1123,9 @@ export const QUESTIONS = [
     q: 'Development and test environments use Amazon Aurora MySQL databases that are busy only a few hours a day, at unpredictable times, and idle the rest. How can the architect reduce database cost with minimal management?',
     options: [
       'Use Aurora Serverless v2, which scales capacity with load and can pause when idle.',
-      'Move to a larger provisioned instance class.',
+      'Move to a larger provisioned instance class with Reserved Instance pricing.',
       'Add Aurora Replicas.',
-      'Migrate to self-managed MySQL on EC2.',
+      'Migrate to self-managed MySQL on EC2 and stop the instances overnight.',
     ],
     answer: [0],
     why: [
@@ -1151,9 +1158,9 @@ export const QUESTIONS = [
     id: 'q063', domain: 4, services: ['cost'],
     q: 'A company wants an alert when its forecasted monthly AWS spend is likely to exceed $10,000, and wants dev instances stopped automatically if actual spend goes over that amount. What should the architect use?',
     options: [
-      'AWS Budgets with forecasted and actual alerts, plus a budget action that stops the dev instances',
-      'AWS Cost Explorer reports',
-      'AWS Trusted Advisor cost checks',
+      'AWS Budgets with forecast and actual alerts, plus a budget action to stop the dev instances',
+      'AWS Cost Explorer with a saved report the team checks each morning',
+      'AWS Trusted Advisor cost optimization checks with weekly email notifications',
       'S3 Storage Lens',
     ],
     answer: [0],
@@ -1170,7 +1177,7 @@ export const QUESTIONS = [
     q: 'Athena queries on a 50 TB CSV dataset in S3 are expensive because each query scans the whole dataset, even though most queries filter by date. How should the architect reduce cost?',
     options: [
       'Convert the data to compressed Parquet and partition it by date.',
-      'Move the data to S3 Standard-IA.',
+      'Move the data to S3 Standard-IA to lower the storage cost per query.',
       'Increase the workgroup’s data usage limit.',
       'Load the data into Amazon RDS.',
     ],
@@ -1205,9 +1212,9 @@ export const QUESTIONS = [
     id: 'q066', domain: 4, services: ['ec2', 'eventbridge', 'autoscaling'],
     q: 'Development EC2 instances run 24/7, but developers only use them from 8 AM to 6 PM on weekdays. How can the company reduce cost with minimal effort?',
     options: [
-      'Stop the instances outside working hours with a schedule (for example, EventBridge Scheduler or Instance Scheduler on AWS).',
-      'Buy Reserved Instances for the dev instances.',
-      'Switch the dev instances to Spot and leave them running 24/7.',
+      'Stop the instances outside working hours on a schedule (EventBridge Scheduler or Instance Scheduler on AWS).',
+      'Buy 1-year Reserved Instances for the dev instances to discount their 24/7 running.',
+      'Switch the dev instances to Spot Instances and leave them running 24/7 at the lower price.',
       'Move to larger instances so work finishes faster.',
     ],
     answer: [0],
@@ -1244,9 +1251,9 @@ export const QUESTIONS = [
     q: 'A production Amazon RDS for MySQL database runs 24/7 with steady load and will be needed for at least 3 more years. How can the company reduce its cost?',
     options: [
       'Purchase RDS Reserved Instances for a 3-year term.',
-      'Run the database on Spot capacity.',
+      'Run the database on Spot capacity with Multi-AZ for safety.',
       'Stop the database every night.',
-      'Buy a Compute Savings Plan.',
+      'Buy a Compute Savings Plan for the database’s usage.',
     ],
     answer: [0],
     why: [
@@ -1258,6 +1265,8 @@ export const QUESTIONS = [
     study: 'Discount options per service: RDS, ElastiCache, Redshift and OpenSearch have Reserved Instances, while Savings Plans cover compute.',
   },
 ];
+
+export const QUESTIONS = [...CORE, ...SECURE, ...RESILIENT, ...PERFORMANCE, ...COST];
 
 const byId = new Map(QUESTIONS.map(q => [q.id, q]));
 export const qById = id => byId.get(id);

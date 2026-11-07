@@ -5,7 +5,7 @@ import { QUESTIONS, DOMAINS } from '../data/questions.js';
 import { SERVICES, COMPARISONS, CATEGORIES } from '../data/services.js';
 import { LABS } from '../data/labs.js';
 import { DIAGRAMS } from '../data/diagrams.js';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 const errors = [];
 const err = (where, msg) => errors.push(`${where}: ${msg}`);
@@ -92,12 +92,36 @@ DIAGRAMS.forEach(d => {
     .forEach(c => { if (!css.includes(`.ig .${c} `)) err(w, `no CSS rule for colour class ${c}`); });
 });
 
-const byDomain =DOMAINS.map(d => `${d.name}: ${QUESTIONS.filter(q => q.domain === d.id).length}`).join(', ');
+// Every data file must be cached for offline use.
+readdirSync(new URL('data/', root)).filter(f => f.endsWith('.js')).forEach(f => {
+  if (!sw.includes(`'data/${f}'`)) err('sw.js', `add 'data/${f}' to SHELL for offline use`);
+});
+
+// Same question twice (e.g. pasted into two files).
+const seenQ = new Map();
+QUESTIONS.forEach(q => {
+  const k = q.q.toLowerCase().replace(/\W+/g, ' ').trim();
+  if (seenQ.has(k)) err(`question ${q.id}`, `same text as ${seenQ.get(k)}`);
+  seenQ.set(k, q.id);
+});
+
+// Giveaway check: the right answer must not stand out by being much longer
+// than every wrong option (test-takers learn to "pick the longest").
+QUESTIONS.filter(q => q.answer.length === 1).forEach(q => {
+  const right = q.options[q.answer[0]].length;
+  const wrong = Math.max(...q.options.filter((_, i) => i !== q.answer[0]).map(o => o.length));
+  if (right > wrong * 1.3) err(`question ${q.id}`, `correct option is ${Math.round((right / wrong - 1) * 100)}% longer than every other option; trim it or add detail to a wrong one`);
+});
+const longest = QUESTIONS.filter(q => q.answer.length === 1 && q.options.every((o, i) => i === q.answer[0] || o.length < q.options[q.answer[0]].length)).length;
+const single = QUESTIONS.filter(q => q.answer.length === 1).length;
+
+const byDomain = DOMAINS.map(d => `${d.name}: ${QUESTIONS.filter(q => q.domain === d.id).length}`).join(', ');
 const multi = QUESTIONS.filter(q => q.answer.length > 1).length;
 console.log(`${QUESTIONS.length} questions (${byDomain}; ${multi} multi-answer)`);
 console.log(`${SERVICES.length} services, ${COMPARISONS.length} comparisons, ${DIAGRAMS.length} diagrams, ${LABS.length} labs, ${LABS.reduce((n, l) => n + l.steps.length, 0)} lab steps`);
 const unused = SERVICES.filter(s => !QUESTIONS.some(q => q.services.includes(s.id))).map(s => s.id);
 if (unused.length) console.log(`services without questions: ${unused.join(', ')}`);
+console.log(`correct answer is the longest option in ${longest} of ${single} single-answer questions (${Math.round(longest / single * 100)}%), never by more than 30%`);
 
 if (errors.length) {
   console.error(`\n${errors.length} problem(s):\n- ${errors.join('\n- ')}`);
