@@ -20,6 +20,7 @@ const routes = [
   [/^\/labs\/([\w-]+)$/, Labs.run, 'labs', true],
   [/^\/learn$/, Learn.list, 'learn'],
   [/^\/learn\/compare\/([\w-]+)$/, Learn.compare, 'learn'],
+  [/^\/learn\/visual\/([\w-]+)$/, Learn.visual, 'learn'],
   [/^\/learn\/([\w-]+)$/, Learn.service, 'learn'],
 ];
 

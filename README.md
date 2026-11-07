@@ -11,7 +11,7 @@ A study app for the **AWS Certified Solutions Architect – Associate (SAA-C03)*
 | **Practice** | Answer questions one at a time. After you check an answer you see why each option is right or wrong, plus what to study next with links to the service notes. Filter by domain, service, or questions you missed. |
 | **Exam** | Timed mock exams (65 Q / 130 min, 30 Q / 60 min, or 15 Q / 30 min) weighted like the real exam. Flag questions and jump around with the grid. At the end you get your score, a breakdown by domain and a full review. |
 | **Labs** | Console walkthroughs as multiple-choice steps: *you're on this screen — what do you do next?* Each step explains what to click, and you finish with a cheat sheet of the whole procedure. |
-| **Learn** | Notes for about 55 services (key numbers, exam must-knows, when to use and when not to), plus side-by-side comparison tables. |
+| **Learn** | Notes for about 55 services (key numbers, exam must-knows, when to use and when not to), side-by-side comparison tables, and visual guides: infographics for VPC layout, security groups vs NACLs, load balancers, S3 storage classes, messaging and disaster recovery. Tap one to open it full screen. |
 
 Progress is saved on your device only.
 
@@ -36,6 +36,7 @@ All content is plain JavaScript data. You can edit it straight on GitHub, and th
 - **Service notes and comparisons:** `data/services.js`
 - **Labs:** `data/labs.js`
 - **Lab screenshots:** see [`assets/labs/README.md`](assets/labs/README.md)
+- **Infographics:** `assets/diagrams/<id>.svg`, listed in `data/diagrams.js` (which pages show each one). They use colour classes instead of fixed colours so they follow light and dark mode. To add a light/dark SVG pair exported from a design tool, run `tools/import-diagram.mjs` (instructions at the top of the file).
 
 Run the content checks before pushing (the deploy does this too):
 

@@ -4,6 +4,8 @@
 import { QUESTIONS, DOMAINS } from '../data/questions.js';
 import { SERVICES, COMPARISONS, CATEGORIES } from '../data/services.js';
 import { LABS } from '../data/labs.js';
+import { DIAGRAMS } from '../data/diagrams.js';
+import { readFileSync, existsSync } from 'node:fs';
 
 const errors = [];
 const err = (where, msg) => errors.push(`${where}: ${msg}`);
@@ -67,10 +69,33 @@ LABS.forEach(l => {
   });
 });
 
-const byDomain = DOMAINS.map(d => `${d.name}: ${QUESTIONS.filter(q => q.domain === d.id).length}`).join(', ');
+// Diagrams: links, files on disk, offline cache and colour classes.
+const root = new URL('..', import.meta.url);
+const sw = readFileSync(new URL('sw.js', root), 'utf8');
+const css = readFileSync(new URL('css/app.css', root), 'utf8');
+dupes(DIAGRAMS, 'diagrams');
+DIAGRAMS.forEach(d => {
+  const w = `diagram ${d.id}`;
+  ['title', 'topic', 'blurb', 'h'].forEach(k => { if (!d[k]) err(w, `missing ${k}`); });
+  if (!d.services.length && !d.compares.length) err(w, 'not linked to any service or comparison');
+  d.services.forEach(s => { if (!svcIds.has(s)) err(w, `unknown service ${s}`); });
+  d.compares.forEach(c => { if (!cmpIds.has(c)) err(w, `unknown comparison ${c}`); });
+  const file = `assets/diagrams/${d.id}.svg`;
+  if (!existsSync(new URL(file, root))) { err(w, `missing ${file}`); return; }
+  const svg = readFileSync(new URL(file, root), 'utf8');
+  const vb = svg.match(/viewBox="[\d.-]+ [\d.-]+ 390 ([\d.]+)"/);
+  if (!vb) err(w, 'SVG needs a viewBox 390 wide');
+  else if (Number(vb[1]) !== d.h) err(w, `h is ${d.h} but the SVG is ${vb[1]} tall`);
+  if (/(fill|stroke)="#/.test(svg)) err(w, 'hard-coded colour in SVG; use f-*/s-* classes so dark mode works');
+  if (!sw.includes(`'${file}'`)) err(w, `add '${file}' to SHELL in sw.js for offline use`);
+  new Set([...svg.matchAll(/class="([^"]+)"/g)].flatMap(m => m[1].split(' ')).filter(c => /^[fs]-/.test(c)))
+    .forEach(c => { if (!css.includes(`.ig .${c} `)) err(w, `no CSS rule for colour class ${c}`); });
+});
+
+const byDomain =DOMAINS.map(d => `${d.name}: ${QUESTIONS.filter(q => q.domain === d.id).length}`).join(', ');
 const multi = QUESTIONS.filter(q => q.answer.length > 1).length;
 console.log(`${QUESTIONS.length} questions (${byDomain}; ${multi} multi-answer)`);
-console.log(`${SERVICES.length} services, ${COMPARISONS.length} comparisons, ${LABS.length} labs, ${LABS.reduce((n, l) => n + l.steps.length, 0)} lab steps`);
+console.log(`${SERVICES.length} services, ${COMPARISONS.length} comparisons, ${DIAGRAMS.length} diagrams, ${LABS.length} labs, ${LABS.reduce((n, l) => n + l.steps.length, 0)} lab steps`);
 const unused = SERVICES.filter(s => !QUESTIONS.some(q => q.services.includes(s.id))).map(s => s.id);
 if (unused.length) console.log(`services without questions: ${unused.join(', ')}`);
 

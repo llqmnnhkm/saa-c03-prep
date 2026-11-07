@@ -403,7 +403,7 @@ body.is-run .dock { bottom: 0; padding-bottom: calc(10px + var(--safe-b)); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); }
 .btn.text-danger { color: var(--bad); }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
-.btn.block { width: 100%; }
+.btn.block { display: flex; width: 100%; }
 .btn.sm { min-height: 38px; padding: 0 14px; font-size: 15px; border-radius: 10px; }
 .btn .i { margin: 0 -2px; }
 .btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1226,6 +1226,136 @@ pre code { background: none; border: 0; padding: 0; font-size: inherit; word-bre
 }
 .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; touch-action: pinch-zoom; }
 .lightbox .icon-btn { position: absolute; top: calc(var(--safe-t) + 8px); right: 8px; color: #fff; background: rgba(255, 255, 255, .14); }
+
+/* ---------- Infographics (assets/diagrams/*.svg) ----------
+   The SVGs carry classes instead of colours: f-* = fill, s-* = stroke.
+   Text, muted text and accent follow the app tokens; the rest are tuned
+   per theme so the tinted boxes keep their contrast. */
+
+.ig {
+  --ig-canvas: #ffffff;
+  --ig-panel: #f3f4f6;
+  --ig-line: #c3c8d0;
+  --ig-violet-line: #a595d9;
+  --ig-violet-ink: #4b3891;
+  --ig-violet-fill: #eeeafa;
+  --ig-amber-line: #dfa766;
+  --ig-amber-ink: #83500f;
+  --ig-amber-fill: #fcefdf;
+  --ig-green-line: #84c29e;
+  --ig-green-ink: #1d6640;
+  --ig-green-fill: #e6f4ec;
+}
+:root[data-theme="dark"] .ig {
+  --ig-canvas: #0d0e11;
+  --ig-panel: #17191d;
+  --ig-line: #3b4048;
+  --ig-violet-line: #6857a8;
+  --ig-violet-ink: #c3b6f3;
+  --ig-violet-fill: #1e1a2d;
+  --ig-amber-line: #8a6232;
+  --ig-amber-ink: #f0c087;
+  --ig-amber-fill: #291f14;
+  --ig-green-line: #3d7955;
+  --ig-green-ink: #8fd4aa;
+  --ig-green-fill: #13241a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ig {
+    --ig-canvas: #0d0e11;
+    --ig-panel: #17191d;
+    --ig-line: #3b4048;
+    --ig-violet-line: #6857a8;
+    --ig-violet-ink: #c3b6f3;
+    --ig-violet-fill: #1e1a2d;
+    --ig-amber-line: #8a6232;
+    --ig-amber-ink: #f0c087;
+    --ig-amber-fill: #291f14;
+    --ig-green-line: #3d7955;
+    --ig-green-ink: #8fd4aa;
+    --ig-green-fill: #13241a;
+  }
+}
+
+.ig .f-ink { fill: var(--text); }
+.ig .f-muted { fill: var(--text-2); }
+.ig .f-accent { fill: var(--accent); }
+.ig .f-canvas { fill: var(--ig-canvas); }
+.ig .f-panel { fill: var(--ig-panel); }
+.ig .f-tip-fill { fill: var(--accent-soft); }
+.ig .f-violet-ink { fill: var(--ig-violet-ink); }
+.ig .f-violet-fill { fill: var(--ig-violet-fill); }
+.ig .f-violet-line { fill: var(--ig-violet-line); }
+.ig .f-amber-ink { fill: var(--ig-amber-ink); }
+.ig .f-amber-fill { fill: var(--ig-amber-fill); }
+.ig .f-amber-line { fill: var(--ig-amber-line); }
+.ig .f-green-ink { fill: var(--ig-green-ink); }
+.ig .f-green-fill { fill: var(--ig-green-fill); }
+.ig .f-green-line { fill: var(--ig-green-line); }
+.ig .f-line { fill: var(--ig-line); }
+.ig .s-ink { stroke: var(--text); }
+.ig .s-muted { stroke: var(--text-2); }
+.ig .s-accent { stroke: var(--accent); }
+.ig .s-canvas { stroke: var(--ig-canvas); }
+.ig .s-panel { stroke: var(--ig-panel); }
+.ig .s-line { stroke: var(--ig-line); }
+.ig .s-violet-line { stroke: var(--ig-violet-line); }
+.ig .s-amber-line { stroke: var(--ig-amber-line); }
+.ig .s-green-line { stroke: var(--ig-green-line); }
+.ig .s-violet-ink { stroke: var(--ig-violet-ink); }
+.ig .s-amber-ink { stroke: var(--ig-amber-ink); }
+.ig .s-green-ink { stroke: var(--ig-green-ink); }
+
+.ig-fig figcaption { color: var(--text-2); font-size: 15px; line-height: 1.5; margin-bottom: 12px; }
+.ig {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--ig-canvas);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+button.ig { cursor: zoom-in; max-width: 460px; margin-inline: auto; }
+button.ig:not(.is-ready) { background: var(--surface-2); }
+button.ig:active { opacity: .85; }
+button.ig:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ig.is-failed { aspect-ratio: auto !important; cursor: default; }
+.ig-svg { display: block; width: 100%; height: auto; }
+.ig-fail { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 20px; color: var(--text-2); font-size: 14px; text-align: center; }
+
+.ig-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: fade-in .15s ease;
+}
+.ig-viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--safe-t) + 6px) max(8px, env(safe-area-inset-right, 0px)) 6px var(--gutter-l);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.ig-viewer-bar b { flex: 1; min-width: 0; font-size: 16px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig-viewer > .sc { flex: 1; min-height: 0; }
+.ig-viewer .sc-vp {
+  height: 100%;
+  max-height: none;
+  padding: 12px 14px calc(var(--safe-b) + 20px) 8px;
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+}
+.ig-viewer .sc-y > .sc-track { right: 4px; }
+.ig-viewer .ig { max-width: 600px; margin: 0 auto; }
+.ig-viewer-tip { text-align: center; margin-top: 10px; font-size: 12px; color: var(--text-3); }
 
 .empty { padding: 28px 16px; text-align: center; color: var(--text-2); font-size: 15px; }
 .empty b { display: block; color: var(--text); font-size: 16px; margin-bottom: 4px; }

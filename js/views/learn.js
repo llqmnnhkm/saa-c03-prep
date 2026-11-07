@@ -3,6 +3,8 @@ import { esc, md, plural } from '../util.js';
 import { SERVICES, CATEGORIES, COMPARISONS, svcById, plainName } from '../../data/services.js';
 import { QUESTIONS } from '../../data/questions.js';
 import { LABS } from '../../data/labs.js';
+import { DIAGRAMS, diagramById } from '../../data/diagrams.js';
+import { openDiagram } from '../ui.js';
 import { startPractice } from './practice.js';
 
 // Remembered while the app is open, so going back keeps your search.
@@ -31,6 +33,57 @@ export function tableHTML(t) {
     <p class="scroll-hint">${icon('arrows-x', 14)} Swipe sideways to see every column</p>
   </div>`;
 }
+
+/* ------------------------------------------------------------ diagrams -- */
+
+// Infographic block. The SVG is fetched after render (see loadDiagrams) into
+// a box that already has the right shape, so the page doesn't jump.
+export function diagramHTML(d, { heading = true } = {}) {
+  return `<section>
+    ${heading ? `<h2 class="label">${esc(d.title)}</h2>` : ''}
+    <figure class="ig-fig">
+      ${heading ? `<figcaption>${esc(d.blurb)}</figcaption>` : ''}
+      <button type="button" class="ig" data-ig="${d.id}" aria-label="${esc(d.title)}: open full screen" style="aspect-ratio: 390 / ${d.h}"></button>
+      <p class="scroll-hint">${icon('expand', 14)} Tap the diagram to open it full screen</p>
+    </figure>
+  </section>`;
+}
+
+const svgCache = new Map();
+const getSvg = id => {
+  if (!svgCache.has(id)) {
+    svgCache.set(id, fetch(`assets/diagrams/${id}.svg`).then(r => {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    }).catch(e => { svgCache.delete(id); throw e; }));
+  }
+  return svgCache.get(id);
+};
+
+function loadDiagrams(root) {
+  root.querySelectorAll('[data-ig]').forEach(async el => {
+    try {
+      el.innerHTML = await getSvg(el.dataset.ig);
+      el.classList.add('is-ready');
+    } catch {
+      el.classList.add('is-failed');
+      el.innerHTML = `<span class="ig-fail">${icon('alert', 20)}Couldn’t load this diagram. It will show once you’re back online.</span>`;
+    }
+  });
+}
+
+// Returns true when the click opened a diagram.
+function diagramClick(e) {
+  const el = e.target.closest('[data-ig].is-ready');
+  if (!el) return false;
+  const d = diagramById(el.dataset.ig);
+  getSvg(d.id).then(svg => openDiagram(svg, d.title));
+  return true;
+}
+
+const diagramsFor = ({ service, compare }) => DIAGRAMS.filter(d => (service && d.services.includes(service)) || (compare && d.compares.includes(compare)));
+const diagramCats = d => [...new Set(d.services.map(svcById).filter(Boolean).map(s => s.cat))];
+const visualCard = d => `<a class="cmp-card" href="#/learn/visual/${d.id}">${icon('diagram', 20)}<b>${esc(d.title)}</b><span>${esc(d.blurb)}</span></a>`;
 
 const svcRow = s => {
   const n = qCount(s.id);
@@ -68,14 +121,19 @@ export function list(ctx) {
     const svcs = SERVICES.filter(s => (cat === 'all' || s.cat === cat) && match(s));
     const cmps = COMPARISONS.filter(c => (cat === 'all' || c.cats.includes(cat)) && (!q || (c.title + ' ' + c.blurb + ' ' + (c.keywords || '')).toLowerCase().includes(q)));
     const groups = CATEGORIES.map(c => ({ c, items: svcs.filter(s => s.cat === c.id) })).filter(g => g.items.length);
+    const visuals = DIAGRAMS.filter(d => (cat === 'all' || diagramCats(d).includes(cat)) && (!q || [d.title, d.topic, d.blurb, ...d.services.map(id => svcById(id)?.name || '')].join(' ').toLowerCase().includes(q)));
 
     results.innerHTML = `
+      ${visuals.length ? `<section>
+        <h2 class="label">Visual guides <span class="label-note">swipe</span></h2>
+        <div class="cmp-cards" data-scroll="x" data-bleed>${visuals.map(visualCard).join('')}</div>
+      </section>` : ''}
       ${cmps.length ? `<section>
         <h2 class="label">Side-by-side comparisons <span class="label-note">swipe</span></h2>
         <div class="cmp-cards" data-scroll="x" data-bleed>${cmps.map(cmpCard).join('')}</div>
       </section>` : ''}
       ${groups.map(g => `<section><h2 class="label">${esc(g.c.name)} <span class="label-note">${g.items.length}</span></h2><div class="list">${g.items.map(svcRow).join('')}</div></section>`).join('')}
-      ${!groups.length && !cmps.length ? `<div class="card empty"><b>No matches for “${esc(query)}”</b>Try a service name like “Aurora” or a topic like “encryption”.</div>` : ''}`;
+      ${!groups.length && !cmps.length && !visuals.length ? `<div class="card empty"><b>No matches for “${esc(query)}”</b>Try a service name like “Aurora” or a topic like “encryption”.</div>` : ''}`;
     ctx.enhance(results);
   };
   draw();
@@ -126,6 +184,8 @@ export function service(ctx, { params: [id] }) {
 
     <section><h2 class="label">What it is</h2><div class="card prose"><p>${md(s.about)}</p></div></section>
 
+    ${diagramsFor({ service: id }).map(d => diagramHTML(d)).join('')}
+
     ${s.flow ? `<section><h2 class="label">${esc(s.flowTitle || 'Typical setup')}</h2>${flowHTML(s.flow)}</section>` : ''}
 
     <section><h2 class="label">Exam must-knows</h2><ul class="card checks">${s.must.map(m => `<li>${icon('check', 18)}<span>${md(m)}</span></li>`).join('')}</ul></section>
@@ -146,12 +206,40 @@ export function service(ctx, { params: [id] }) {
     <section><div class="list"><a class="row" href="${esc(s.docs)}" target="_blank" rel="noopener">${icon('external', 20)}<span class="row-main"><span class="row-title">AWS documentation</span><span class="row-sub">Official docs, for the latest limits and features</span></span></a></div></section>
   </div>`);
 
-  if (qs.length) {
-    ctx.dock(`<button type="button" class="btn primary block" data-act="practice">${icon('practice', 18)} Practise ${plural(qs.length, 'question')} on ${esc(plainName(s))}</button>`);
-    ctx.on('click', e => {
-      if (e.target.closest('[data-act="practice"]')) startPractice(ctx, { ids: qs.map(q => q.id) });
-    });
-  }
+  loadDiagrams(ctx.view);
+  if (qs.length) ctx.dock(`<button type="button" class="btn primary block" data-act="practice">${icon('practice', 18)} Practise ${plural(qs.length, 'question')} on ${esc(plainName(s))}</button>`);
+  ctx.on('click', e => {
+    if (diagramClick(e)) return;
+    if (e.target.closest('[data-act="practice"]')) startPractice(ctx, { ids: qs.map(q => q.id) });
+  });
+}
+
+/* --------------------------------------------------------------- visual -- */
+
+export function visual(ctx, { params: [id] }) {
+  const d = diagramById(id);
+  if (!d) { ctx.go('#/learn'); return; }
+  ctx.header({ title: d.title, back: { fallback: '#/learn' } });
+  const svcs = d.services.map(svcById).filter(Boolean);
+  const cmps = d.compares.map(cid => COMPARISONS.find(c => c.id === cid)).filter(Boolean);
+  const qs = QUESTIONS.filter(q => q.services.some(sid => d.services.includes(sid)) || d.compares.includes(q.compare));
+  const row = (href, ic, title, sub) => `<a class="row" href="${href}">${icon(ic, 20)}<span class="row-main"><span class="row-title">${esc(title)}</span><span class="row-sub">${esc(sub)}</span></span><span class="chev">${icon('chevron-right', 18)}</span></a>`;
+
+  ctx.render(`<div class="wrap stack">
+    <div><div class="eyebrow">${esc(d.topic)} · visual guide</div><h1 class="h1">${esc(d.title)}</h1><p class="lede" style="margin-top:6px">${esc(d.blurb)}</p></div>
+    ${diagramHTML(d, { heading: false })}
+    <section><h2 class="label">Read more</h2><div class="list">
+      ${svcs.map(s => row(`#/learn/${s.id}`, 'learn', s.name, s.one)).join('')}
+      ${cmps.map(c => row(`#/learn/compare/${c.id}`, 'columns', c.title, c.blurb)).join('')}
+    </div></section>
+  </div>`);
+
+  loadDiagrams(ctx.view);
+  if (qs.length) ctx.dock(`<button type="button" class="btn primary block" data-act="practice">${icon('practice', 18)} Practise ${plural(qs.length, 'related question')}</button>`);
+  ctx.on('click', e => {
+    if (diagramClick(e)) return;
+    if (e.target.closest('[data-act="practice"]')) startPractice(ctx, { ids: qs.map(q => q.id), limit: 20 });
+  });
 }
 
 /* -------------------------------------------------------------- compare -- */
@@ -161,16 +249,18 @@ export function compare(ctx, { params: [id] }) {
   if (!c) { ctx.go('#/learn'); return; }
   ctx.header({ title: c.title, back: { fallback: '#/learn' } });
   const qs = QUESTIONS.filter(q => q.compare === c.id || q.services.some(sid => c.services.includes(sid)));
+  const dias = diagramsFor({ compare: c.id });
   ctx.render(`<div class="wrap stack">
     <div><div class="eyebrow">Comparison</div><h1 class="h1">${esc(c.title)}</h1><p class="lede" style="margin-top:6px">${md(c.intro)}</p></div>
-    ${tableHTML(c.table)}
+    ${dias.map(d => diagramHTML(d)).join('')}
+    ${dias.length ? `<section><h2 class="label">Side by side</h2>${tableHTML(c.table)}</section>` : tableHTML(c.table)}
     <section><h2 class="label">Exam rules of thumb</h2><ul class="card checks">${c.tips.map(t => `<li>${icon('bulb', 18)}<span>${md(t)}</span></li>`).join('')}</ul></section>
     <section><h2 class="label">Services</h2><div class="chips wrapc">${c.services.map(svcById).filter(Boolean).map(s => `<a class="chip" href="#/learn/${s.id}">${esc(s.name)}</a>`).join('')}</div></section>
   </div>`);
-  if (qs.length) {
-    ctx.dock(`<button type="button" class="btn primary block" data-act="practice">${icon('practice', 18)} Practise ${plural(qs.length, 'related question')}</button>`);
-    ctx.on('click', e => {
-      if (e.target.closest('[data-act="practice"]')) startPractice(ctx, { ids: qs.map(q => q.id), limit: 20 });
-    });
-  }
+  loadDiagrams(ctx.view);
+  if (qs.length) ctx.dock(`<button type="button" class="btn primary block" data-act="practice">${icon('practice', 18)} Practise ${plural(qs.length, 'related question')}</button>`);
+  ctx.on('click', e => {
+    if (diagramClick(e)) return;
+    if (e.target.closest('[data-act="practice"]')) startPractice(ctx, { ids: qs.map(q => q.id), limit: 20 });
+  });
 }

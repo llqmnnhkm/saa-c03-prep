@@ -215,6 +215,26 @@ export function openLightbox(src, alt = '') {
   lock(true);
 }
 
+// Full-screen view for an infographic: scrolls vertically, pinch to zoom.
+export function openDiagram(svgHTML, title) {
+  const el = document.createElement('div');
+  el.className = 'ig-viewer';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', title);
+  el.innerHTML = `
+    <div class="ig-viewer-bar"><b>${esc(title)}</b><button type="button" class="icon-btn" aria-label="Close">${icon('x', 22)}</button></div>
+    <div class="ig-viewer-body" data-scroll="y"><div class="ig">${svgHTML}</div><p class="ig-viewer-tip">Pinch to zoom</p></div>`;
+  const close = () => { disposeScrollers(el); el.remove(); lock(false); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  el.querySelector('.icon-btn').addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(el);
+  enhanceScrollers(el);
+  lock(true);
+  el.querySelector('.icon-btn').focus();
+}
+
 let toastEl = null;
 export function showToast({ title, body = '', action, onAction, onClose }) {
   hideToast();
