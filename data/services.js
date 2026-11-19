@@ -157,7 +157,7 @@ export const SERVICES = [
     stats: [['11 nines', 'durability (99.999999999%)'], ['5 TB', 'max object size'], ['3,500 / 5,500', 'writes / reads per second per prefix'], ['Strong', 'read-after-write consistency']],
     must: [
       'Security: IAM policies, **bucket policies**, **Block Public Access**, ACLs disabled by default. Enforce HTTPS with `aws:SecureTransport`.',
-      'Encryption: SSE-S3 is the default for new objects; SSE-KMS adds key control and audit; DSSE-KMS double layer; SSE-C you supply the key.',
+      'Encryption: SSE-S3 is the default for new objects; SSE-KMS adds key control and audit; DSSE-KMS double layer; SSE-C you supply the key (disabled by default on new buckets since April 2026, enable it with `PutBucketEncryption`).',
       'Protection: **Versioning**, MFA Delete, **Object Lock** (compliance / governance), Replication (CRR/SRR, needs versioning).',
       'Performance: **multipart upload** (required over 5 GB per PUT), **Transfer Acceleration**, byte-range fetches, spread load across prefixes.',
       '**Presigned URLs** give temporary access to one object. Event notifications go to SQS, SNS, Lambda or EventBridge.',
@@ -293,7 +293,7 @@ export const SERVICES = [
   {
     id: 'snow', name: 'AWS Snow Family', short: 'SNOW', cat: 'migration',
     one: 'Rugged devices to move data offline or compute at the edge.',
-    about: 'Snowball Edge devices are shipped to you, you load data locally, and AWS imports it into S3. They’re used when networks are too slow or too expensive for the data volume, or for computing in disconnected locations. AWS has been retiring older Snow devices, so check the docs for what’s currently available.',
+    about: 'Snowball Edge devices are shipped to you, you load data locally, and AWS imports it into S3. They’re used when networks are too slow or too expensive for the data volume, or for computing in disconnected locations. Since 7 November 2025, Snowball Edge is no longer available to new customers (existing customers can keep using it). AWS now points new customers to DataSync, AWS Data Transfer Terminal or partner solutions, and to Outposts for edge computing. The exam may still use Snowball as the offline transfer answer.',
     stats: [['Offline', 'transfer by shipping'], ['KMS', 'encrypted at rest'], ['Edge', 'compute options']],
     must: [
       'Rule of thumb: if a network transfer would take **more than about a week**, consider Snowball.',
@@ -526,7 +526,7 @@ export const SERVICES = [
       '**ALB**: HTTP/HTTPS/gRPC, path/host/header rules, Lambda targets, WAF, Cognito/OIDC auth.',
       '**NLB**: TCP/UDP/TLS, ultra-low latency, millions of requests/s, **static IP per AZ** (Elastic IP), preserves client IP, PrivateLink.',
       '**GWLB**: deploys third-party firewalls and inspection appliances inline (GENEVE).',
-      'Cross-zone load balancing: always on for ALB, off by default for NLB/GWLB.',
+      'Cross-zone load balancing: on by default for ALB (can be turned off per target group), off by default for NLB/GWLB.',
       'Sticky sessions, deregistration delay (connection draining), SNI for many TLS certificates.',
     ],
     use: ['Any multi-instance web or TCP service', 'Front door for Auto Scaling groups and containers'],

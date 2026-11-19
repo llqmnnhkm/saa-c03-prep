@@ -1206,7 +1206,7 @@ const CORE = [
       'Direct Connect usually takes weeks to provision and is expensive for a one-time move.',
       'Still limited by the 200 Mbps local link.',
     ],
-    study: 'Rule of thumb: if a network transfer would take more than about a week, consider an offline transfer. Check current Snow device availability in the AWS docs, as AWS has been retiring older devices. Use DataSync for scheduled or incremental online transfers.',
+    study: 'Rule of thumb: if a network transfer would take more than about a week, consider an offline transfer. In real projects, note that Snowball Edge has been closed to new customers since 7 November 2025; AWS now points new customers to DataSync, AWS Data Transfer Terminal or partner solutions. The exam may still use Snowball as the offline answer. Use DataSync for scheduled or incremental online transfers.',
   },
   {
     id: 'q066', domain: 4, services: ['ec2', 'eventbridge', 'autoscaling'],

@@ -612,7 +612,7 @@ export const SECURE = [
       'With **SSE-C**, you send the key with each request. S3 encrypts or decrypts, then discards the key, storing only a hash to validate future requests.',
       'DSSE-KMS adds a second layer of encryption, but the keys are still in KMS.',
     ],
-    study: 'S3 encryption options: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C and client-side encryption, and who holds the keys in each.',
+    study: 'S3 encryption options: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C and client-side encryption, and who holds the keys in each. Since April 2026, SSE-C is disabled by default on new general purpose buckets, so you must enable it with `PutBucketEncryption` before using it.',
   },
   {
     id: 'q135', domain: 1, services: ['waf', 'organizations'],

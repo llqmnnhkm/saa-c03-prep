@@ -13,14 +13,21 @@ export const PRESETS = [
 ];
 const TARGET = 72;
 
+// Least-seen questions first (random within ties), so repeat mocks rotate
+// through the whole bank instead of drawing the same questions again.
+function freshest(list) {
+  const seen = id => store.state.answers[id]?.seen || 0;
+  return shuffle(list).sort((a, b) => seen(a.id) - seen(b.id));
+}
+
 function pick(n) {
   const out = [];
   const used = new Set();
   DOMAINS.forEach(d => {
     const take = Math.round((n * d.weight) / 100);
-    shuffle(QUESTIONS.filter(q => q.domain === d.id)).slice(0, take).forEach(q => { out.push(q); used.add(q.id); });
+    freshest(QUESTIONS.filter(q => q.domain === d.id)).slice(0, take).forEach(q => { out.push(q); used.add(q.id); });
   });
-  const rest = shuffle(QUESTIONS.filter(q => !used.has(q.id)));
+  const rest = freshest(QUESTIONS.filter(q => !used.has(q.id))).reverse();
   while (out.length < n && rest.length) out.push(rest.pop());
   return shuffle(out).slice(0, n);
 }
